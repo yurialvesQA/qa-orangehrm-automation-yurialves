@@ -136,22 +136,14 @@ jobs:
             }
           }
 
+  # Deploy report desabilitado temporariamente
+  # Para habilitar GitHub Pages, configure as permissões no repositório
+  # Settings > Pages > Source: GitHub Actions
   deploy-report:
     needs: test
     runs-on: ubuntu-latest
-    if: github.ref == 'refs/heads/main'
+    if: false  # Desabilitado temporariamente
     
     steps:
-    - uses: actions/checkout@v4
-    
-    - name: Download Allure Reports
-      uses: actions/download-artifact@v4
-      with:
-        path: allure-reports/
-    
-    - name: Deploy to GitHub Pages
-      uses: peaceiris/actions-gh-pages@v3
-      with:
-        github_token: ${{ secrets.GITHUB_TOKEN }}
-        publish_dir: allure-reports/
-        destination_dir: reports/
+    - name: Deploy disabled
+      run: echo "Deploy para GitHub Pages desabilitado temporariamente"
