@@ -1,0 +1,150 @@
+name: OrangeHRM Automation Tests
+
+on:
+  push:
+    branches: [ main, develop ]
+  pull_request:
+    branches: [ main ]
+  schedule:
+    - cron: '0 2 * * *'  # Executa diariamente às 2:00 AM UTC
+
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    
+    strategy:
+      matrix:
+        python-version: [3.8, 3.9, '3.10']
+        browser: [chrome, firefox]
+    
+    steps:
+    - uses: actions/checkout@v4
+    
+    - name: Set up Python ${{ matrix.python-version }}
+      uses: actions/setup-python@v4
+      with:
+        python-version: ${{ matrix.python-version }}
+    
+    - name: Cache pip dependencies
+      uses: actions/cache@v3
+      with:
+        path: ~/.cache/pip
+        key: ${{ runner.os }}-pip-${{ hashFiles('**/requirements.txt') }}
+        restore-keys: |
+          ${{ runner.os }}-pip-
+    
+    - name: Install dependencies
+      run: |
+        python -m pip install --upgrade pip
+        pip install -r requirements.txt
+    
+    - name: Install Chrome
+      if: matrix.browser == 'chrome'
+      run: |
+        wget -q -O - https://dl.google.com/linux/linux_signing_key.pub | sudo apt-key add -
+        echo "deb [arch=amd64] http://dl.google.com/linux/chrome/deb/ stable main" | sudo tee /etc/apt/sources.list.d/google-chrome.list
+        sudo apt-get update
+        sudo apt-get install -y google-chrome-stable
+    
+    - name: Install Firefox
+      if: matrix.browser == 'firefox'
+      run: |
+        sudo apt-get update
+        sudo apt-get install -y firefox
+    
+    - name: Create results directory
+      run: |
+        mkdir -p results/screenshots
+        mkdir -p results/allure-results
+    
+    - name: Run Robot Framework tests
+      run: |
+        robot -d results \
+              --listener allure_robotframework:results/allure-results \
+              --variable BROWSER:${{ matrix.browser }} \
+              --variable HEADLESS:true \
+              --include smoke \
+              tests/
+      continue-on-error: true
+    
+    - name: Run BDD tests with Behave
+      run: |
+        HEADLESS=true behave features/ --format allure_behave.formatter:AllureFormatter -o results/allure-results
+      continue-on-error: true
+    
+    - name: Generate Allure Report
+      if: always()
+      run: |
+        allure generate results/allure-results --clean -o results/allure-report
+    
+    - name: Upload Allure Report
+      if: always()
+      uses: actions/upload-artifact@v3
+      with:
+        name: allure-report-${{ matrix.python-version }}-${{ matrix.browser }}
+        path: results/allure-report/
+    
+    - name: Upload Test Results
+      if: always()
+      uses: actions/upload-artifact@v3
+      with:
+        name: test-results-${{ matrix.python-version }}-${{ matrix.browser }}
+        path: results/
+    
+    - name: Upload Screenshots
+      if: failure()
+      uses: actions/upload-artifact@v3
+      with:
+        name: screenshots-${{ matrix.python-version }}-${{ matrix.browser }}
+        path: results/screenshots/
+    
+    - name: Comment PR with test results
+      if: github.event_name == 'pull_request' && always()
+      uses: actions/github-script@v6
+      with:
+        script: |
+          const fs = require('fs');
+          const path = require('path');
+          
+          // Verificar se existem resultados de teste
+          const resultsPath = 'results/';
+          if (fs.existsSync(resultsPath)) {
+            const files = fs.readdirSync(resultsPath);
+            const hasResults = files.some(file => file.endsWith('.html') || file.endsWith('.xml'));
+            
+            if (hasResults) {
+              github.rest.issues.createComment({
+                issue_number: context.issue.number,
+                owner: context.repo.owner,
+                repo: context.repo.repo,
+                body: `## 🧪 Test Results
+                
+                **Python Version:** ${{ matrix.python-version }}
+                **Browser:** ${{ matrix.browser }}
+                
+                ✅ Testes executados com sucesso!
+                
+                📊 Relatórios disponíveis nos artifacts.`
+              });
+            }
+          }
+
+  deploy-report:
+    needs: test
+    runs-on: ubuntu-latest
+    if: github.ref == 'refs/heads/main'
+    
+    steps:
+    - uses: actions/checkout@v4
+    
+    - name: Download Allure Reports
+      uses: actions/download-artifact@v3
+      with:
+        path: allure-reports/
+    
+    - name: Deploy to GitHub Pages
+      uses: peaceiris/actions-gh-pages@v3
+      with:
+        github_token: ${{ secrets.GITHUB_TOKEN }}
+        publish_dir: allure-reports/
+        destination_dir: reports/

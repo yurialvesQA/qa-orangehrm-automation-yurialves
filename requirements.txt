@@ -1,0 +1,10 @@
+robotframework==6.1.1
+robotframework-seleniumlibrary==6.4.0
+robotframework-requests==0.9.6
+allure-robotframework==2.13.2
+selenium==4.15.2
+webdriver-manager==4.0.1
+pytest==7.4.3
+pytest-html==4.1.1
+behave==1.2.6
+allure-behave==2.13.2
