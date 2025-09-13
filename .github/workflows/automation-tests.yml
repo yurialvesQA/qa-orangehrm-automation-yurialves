@@ -38,6 +38,15 @@ jobs:
         python -m pip install --upgrade pip
         pip install -r requirements.txt
     
+    - name: Install Allure
+      run: |
+        # Instalar Allure via npm (mais confiável no GitHub Actions)
+        curl -fsSL https://deb.nodesource.com/setup_18.x | sudo -E bash -
+        sudo apt-get install -y nodejs
+        sudo npm install -g allure-commandline
+        # Verificar se o Allure foi instalado corretamente
+        allure --version
+    
     - name: Install Chrome
       if: matrix.browser == 'chrome'
       run: |
@@ -65,7 +74,15 @@ jobs:
     - name: Generate Allure Report
       if: always()
       run: |
-        allure generate results/allure-results --clean -o results/allure-report
+        # Verificar se existem resultados do Allure
+        if [ -d "results/allure-results" ] && [ "$(ls -A results/allure-results)" ]; then
+          echo "Gerando relatório Allure..."
+          allure generate results/allure-results --clean -o results/allure-report
+        else
+          echo "Nenhum resultado do Allure encontrado, criando relatório vazio..."
+          mkdir -p results/allure-report
+          echo "<html><body><h1>Nenhum teste executado</h1></body></html>" > results/allure-report/index.html
+        fi
     
     - name: Upload Allure Report
       if: always()
