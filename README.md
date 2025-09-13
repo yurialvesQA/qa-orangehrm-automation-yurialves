@@ -1,6 +1,6 @@
 # OrangeHRM Automation Project
 
-Este projeto implementa automação de testes para o sistema OrangeHRM utilizando Robot Framework com padrão Page Object Model (POM) e relatórios Allure.
+Este projeto implementa automação de testes para o sistema OrangeHRM utilizando Robot Framework com padrão Page Object Model (POM), BDD com Behave/Gherkin e relatórios Allure.
 
 ## 🎯 Objetivo
 
@@ -11,18 +11,25 @@ Avaliar a capacidade de implementar automações de testes de interface com:
 - Cenários negativos
 - Integração com GitHub Actions
 
-## 🚀 Cenários Automatizados
+## 🚀 Cenários Automatizados (14 CTs)
 
-### Cenários Positivos
-1. **Login bem-sucedido** com as credenciais fornecidas
-2. **Logout do sistema** após o login
-3. **Cadastro de novo funcionário** através do menu PIM > Add Employee
-4. **Busca pelo funcionário** recém-cadastrado em PIM > Employee List
+### Login (CT01-CT06)
+- **CT01**: Login bem-sucedido com credenciais válidas
+- **CT02**: Login com credenciais inválidas
+- **CT03**: Login com usuário vazio
+- **CT04**: Login com senha vazia
+- **CT05**: Logout do sistema após login
+- **CT06**: Verificar link "Forgot your password?"
 
-### Cenários Negativos
-5. **Login inválido** com mensagem de erro validada
-6. **Cadastro de funcionário** com campos obrigatórios vazios
-7. **Busca de funcionário** inexistente
+### Employee Management (CT07-CT14)
+- **CT07**: Cadastro de novo funcionário com dados válidos
+- **CT08**: Cadastro de funcionário com campos obrigatórios
+- **CT09**: Navegação para Employee List
+- **CT10**: Busca de funcionário por ID
+- **CT11**: Busca de funcionário inexistente
+- **CT12**: Reset de filtros de busca
+- **CT13**: Visualização da tabela de funcionários
+- **CT14**: Verificação de cabeçalhos da tabela
 
 ## 🛠️ Tecnologias Utilizadas
 
@@ -43,8 +50,8 @@ Avaliar a capacidade de implementar automações de testes de interface com:
 
 1. Clone o repositório:
 ```bash
-git clone <repository-url>
-cd qa-orangehrm-automation-yduartealvesqa
+git clone https://github.com/yurialvesQA/qa-orangehrm-automation-yurialves.git
+cd qa-orangehrm-automation-yurialves
 ```
 
 2. Crie um ambiente virtual:
@@ -62,60 +69,76 @@ pip install -r requirements.txt
 
 ## 🏃‍♂️ Execução dos Testes
 
-### Executar todos os testes:
+### Executar todos os cenários BDD:
 ```bash
-robot -d results tests/
+behave features/
 ```
 
-### Executar testes específicos:
+### Executar cenários específicos:
 ```bash
-robot -d results tests/login_tests.robot
-robot -d results tests/employee_tests.robot
+# Apenas cenários de login
+behave features/login.feature
+
+# Apenas cenários de employee
+behave features/employee.feature
 ```
 
-### Executar com Allure:
+### Executar com relatório Allure:
 ```bash
-robot -d results --listener allure_robotframework:results/allure-results tests/
+# Executar testes com formatter Allure
+behave features/ --format allure_behave.formatter:AllureFormatter -o results/allure-results
+
+# Gerar e visualizar relatório
+allure generate results/allure-results --clean -o results/allure-report
 allure serve results/allure-results
 ```
 
-### Executar com BDD:
+### Executar cenários por tag:
 ```bash
-behave features/
+# Executar apenas CT01 (login bem-sucedido)
+behave features/ --tags=@CT01
+
+# Executar todos os cenários de login
+behave features/ --tags=@login
+
+# Executar todos os cenários de employee
+behave features/ --tags=@employee
 ```
 
 ## 📊 Relatórios
 
 Os relatórios são gerados na pasta `results/`:
-- `log.html` - Log detalhado dos testes
-- `report.html` - Relatório de resultados
-- `output.xml` - Dados em XML
-- `allure-results/` - Dados para Allure
+- `allure-results/` - Dados para relatórios Allure
+- `allure-report/` - Relatório HTML do Allure
+- `screenshots/` - Screenshots de falhas
+- Logs do Behave no terminal
 
 ## 🏗️ Estrutura do Projeto
 
 ```
-qa-orangehrm-automation-yduartealvesqa/
+qa-orangehrm-automation-yurialves/
 ├── features/                    # Arquivos BDD (Gherkin)
-│   ├── login.feature
-│   ├── employee.feature
-│   └── steps/
+│   ├── login.feature           # Cenários de login (CT01-CT06)
+│   ├── employee.feature        # Cenários de employee (CT07-CT14)
+│   ├── environment.py          # Configuração do ambiente
+│   └── steps/                  # Step definitions
+│       ├── login_steps.py
+│       └── employee_steps.py
 ├── pages/                       # Page Objects
 │   ├── login_page.py
 │   ├── dashboard_page.py
 │   ├── employee_list_page.py
 │   └── add_employee_page.py
-├── tests/                       # Testes Robot Framework
-│   ├── login_tests.robot
-│   ├── employee_tests.robot
-│   └── negative_tests.robot
 ├── resources/                   # Recursos compartilhados
-│   ├── keywords/
-│   ├── variables/
-│   └── common.robot
+│   └── common.robot            # Configurações e keywords
 ├── results/                     # Resultados dos testes
+│   ├── allure-results/
+│   ├── allure-report/
+│   └── screenshots/
 ├── .github/workflows/           # GitHub Actions
+│   └── automation-tests.yml
 ├── requirements.txt
+├── allure.properties
 ├── .gitignore
 └── README.md
 ```
@@ -129,9 +152,17 @@ qa-orangehrm-automation-yduartealvesqa/
 ## 🚀 CI/CD
 
 O projeto está configurado com GitHub Actions para execução automática dos testes em:
-- Push para branch main
-- Pull requests
-- Agendamento diário
+- **Push para branch main** - Execução automática
+- **Pull requests** - Validação antes do merge
+- **Agendamento diário** - Execução às 2:00 AM UTC
+- **Matriz de testes** - Python 3.8, 3.9, 3.10 + Chrome/Firefox
+- **Relatórios Allure** - Disponíveis nos artifacts
+
+### 📊 Status do Workflow:
+- ✅ **6 jobs de teste** - Matriz Python + Browser
+- ✅ **Allure instalado** - Relatórios gerados
+- ✅ **Artifacts disponíveis** - Para download
+- ⏸️ **GitHub Pages** - Desabilitado temporariamente
 
 ## 📝 Padrões de Desenvolvimento
 
@@ -139,4 +170,20 @@ O projeto está configurado com GitHub Actions para execução automática dos t
 - **BDD**: Cenários descritos em linguagem natural
 - **Allure**: Relatórios visuais e detalhados
 - **Clean Code**: Código limpo e bem documentado
+
+## 🔗 Links Úteis
+
+- **Repositório**: https://github.com/yurialvesQA/qa-orangehrm-automation-yurialves
+- **GitHub Actions**: https://github.com/yurialvesQA/qa-orangehrm-automation-yurialves/actions
+- **OrangeHRM Demo**: https://opensource-demo.orangehrmlive.com
+- **Behave Documentation**: https://behave.readthedocs.io/
+- **Allure Documentation**: https://docs.qameta.io/allure/
+
+## 👨‍💻 Autor
+
+**Yuri Alves QA** - [@yurialvesQA](https://github.com/yurialvesQA)
+
+---
+
+⭐ **Se este projeto foi útil, considere dar uma estrela!**
 
